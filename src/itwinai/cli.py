@@ -31,9 +31,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, List, cast
 
-import certifi
 import hydra
-import requests
 import typer
 from omegaconf import DictConfig
 from typing_extensions import Annotated
@@ -1000,6 +998,19 @@ def upload_model_to_hub(
     import subprocess
     import tempfile
 
+    import certifi
+    import requests
+
+    def _check_internet_connection(timeout: float = 3.0) -> bool:
+        """Check if internet connection is available."""
+        import socket
+
+        try:
+            socket.create_connection(("8.8.8.8", 53), timeout=timeout)
+            return True
+        except OSError:
+            return False
+
     model_path = Path(model_dir).resolve()
 
     # Validate if model directory exists and is a directory
@@ -1071,6 +1082,13 @@ def upload_model_to_hub(
             cli_logger.error(f"Upload script not found at: {upload_script_path}")
             raise typer.Exit(code=1)
     else:
+        # Check internet connectivity
+        if not _check_internet_connection():
+            cli_logger.warning(
+                "No internet connection detected. "
+                "Automatic download of upload_model.py may fail"
+            )
+
         # Download the script from GitHub
         cli_logger.info("Downloading upload_model.py from GitHub...")
         github_url = "https://raw.githubusercontent.com/RI-SCALE/ai-model-hub-example/main/upload_model.py"
@@ -1090,7 +1108,11 @@ def upload_model_to_hub(
             cli_logger.info(f"Downloaded upload script to: {upload_script_path}")
 
         except Exception as e:
-            cli_logger.error(f"Failed to download upload script: {e}")
+            cli_logger.error(
+                "Failed to download upload script. "
+                "This is likely due to missing internet access."
+            )
+            cli_logger.error(str(e))
             if temp_dir:
                 shutil.rmtree(temp_dir, ignore_errors=True)
             raise typer.Exit(code=1)
@@ -1110,7 +1132,7 @@ def upload_model_to_hub(
             check=False,
         )
 
-        # Print stdout (even if there's an error, this maybe be useful for debugging)
+        # Print stdout (even if there's an error, this may be useful for debugging)
         if result.stdout:
             cli_logger.info(result.stdout)
 
