@@ -66,11 +66,11 @@ jobs:
         run: |
           # Default tag is 'latest' for main branch
           if [ "${{ github.ref_name }}" == "main" ]; then
-            echo "DOCKER_TAG=latest" >> $GITHUB_ENV
+            echo "DOCKER_TAG=\"latest\"" >> "$GITHUB_ENV"
           else
             # Use branch name for manual or feature builds
-            TAG_NAME=${GITHUB_REF_NAME//\//-}  # replace / with - for Docker tag
-            echo "DOCKER_TAG=$TAG_NAME" >> $GITHUB_ENV
+            TAG_NAME=${GITHUB_REF_NAME//\//-}
+            echo "DOCKER_TAG=\"$TAG_NAME\"" >> "$GITHUB_ENV"
           fi
         shell: bash
 
