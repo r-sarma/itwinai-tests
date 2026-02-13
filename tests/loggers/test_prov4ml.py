@@ -167,7 +167,7 @@ def test_log_model(logger_instance):
         logger_instance.log(item=model_mock, identifier="model_v1", kind="model", step=1)
 
         log_model.assert_called_once_with(
-            model=model_mock, model_name="model_v1", context="training", step=1
+            model_name="model_v1", model=model_mock, context="training", step=1
         )
 
 
@@ -182,8 +182,8 @@ def test_log_best_model(logger_instance):
         )
 
         log_best_model.assert_called_once_with(
-            model=model_mock,
             model_name="best_model_v1",
+            model=model_mock,
             log_model_info=True,
             log_as_artifact=True,
         )
