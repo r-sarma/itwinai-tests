@@ -7,6 +7,7 @@
 # - Matteo Bunino <matteo.bunino@cern.ch> - CERN
 # - Anna Lappe <anna.elisa.lappe@cern.ch> - CERN
 # - Linus Eickhoff <linus.maximilian.eickhoff@cern.ch> - CERN
+# - Rakesh Sarma <r.sarma@fz-juelich.de> - FZJ
 # -------------------------------------------------------------------------------------
 
 """
@@ -120,8 +121,9 @@ def check_initialized(method: Callable) -> Callable:
     def wrapper(self: "Logger", *args, **kwargs):
         if not self.is_initialized:
             raise RuntimeError(
-                f"{self.__class__.__name__} has not been initialized. Use either the"
-                " ``start_logging`` context or the ``create_logger_context`` method."
+                f"{self.__class__.__name__} has not been initialized."
+                " Use either the ``start_logging`` context or the "
+                "``create_logger_context`` method."
             )
         return method(self, *args, **kwargs)
 
@@ -129,8 +131,8 @@ def check_initialized(method: Callable) -> Callable:
 
 
 def check_not_initialized(method: Callable) -> Callable:
-    """Decorator for ``create_logger_context`` method to prevent double initialization of
-    a logger."""
+    """Decorator for ``create_logger_context`` method to prevent double
+    initialization of a logger."""
 
     @functools.wraps(method)
     def wrapper(self: "Logger", *args, **kwargs):
@@ -149,7 +151,8 @@ class Logger(LogMixin):
     """Base class for logger
 
     Args:
-        savedir (Union[Path, str], optional): filesystem location where logs are stored.
+        savedir (Union[Path, str], optional): filesystem location where logs
+            are stored.
             Defaults to 'mllogs'.
         log_freq (Union[int, Literal['epoch', 'batch']], optional):
             how often should the logger fulfill calls to the `log()`
@@ -308,10 +311,17 @@ class Logger(LogMixin):
         """
         # Check worker's global rank
         worker_ok = (
-            isinstance(self.log_on_workers, int)
-            and (self.log_on_workers == -1 or self.log_on_workers == self.worker_rank)
-        ) or (
-            isinstance(self.log_on_workers, list) and self.worker_rank in self.log_on_workers
+            (
+                isinstance(self.log_on_workers, int)
+                and (
+                    self.log_on_workers == -1
+                    or self.log_on_workers == self.worker_rank
+                )
+            )
+            or (
+                isinstance(self.log_on_workers, list)
+                and self.worker_rank in self.log_on_workers
+            )
         )
         if not worker_ok:
             return False
@@ -351,7 +361,11 @@ class ConsoleLogger(Logger):
         log_on_workers: int | List[int] = 0,
     ) -> None:
         cl_savedir = Path(savedir) / "simple-logger"
-        super().__init__(savedir=cl_savedir, log_freq=log_freq, log_on_workers=log_on_workers)
+        super().__init__(
+            savedir=cl_savedir,
+            log_freq=log_freq,
+            log_on_workers=log_on_workers
+        )
 
     @check_not_initialized
     def create_logger_context(self, rank: int = 0, **kwargs):
@@ -367,7 +381,9 @@ class ConsoleLogger(Logger):
             self.is_initialized = True
             return
 
-        py_logger.info(f"Initializing {self.__class__.__name__} on rank {rank}")
+        py_logger.info(
+            f"Initializing {self.__class__.__name__} on rank {rank}"
+        )
 
         if self.savedir.is_dir():
             numeric_dirs = [
@@ -445,13 +461,15 @@ class ConsoleLogger(Logger):
                     if exp_dir.is_dir() and exp_dir.name.isdigit()
                 ]
                 child_id = max(numeric_dirs) + 1
-                target_path = artifact_dir / f"{self._experiment_id}.{child_id}"
+                target_path = artifact_dir / (
+                    f"{self._experiment_id}.{child_id}"
+                )
                 shutil.copytree(item, target_path, dirs_exist_ok=True)
             else:
                 py_logger.info(
-                    "The ConsoleLogger expects an artifact to be either a path or a "
-                    f"directory Received instead an item of type {type(item)}. The item will "
-                    "be ignored and not logged."
+                    "The ConsoleLogger expects an artifact to be either a "
+                    "path or a directory Received instead an item of type "
+                    "{type(item)}. The item will be ignored and not logged."
                 )
 
         elif kind == "torch":
@@ -469,8 +487,8 @@ class MLFlowLogger(Logger):
     """Abstraction around MLFlow logger.
 
     Args:
-        savedir (Union[Path, str], optional): path on local filesystem where logs are
-            stored. Defaults to 'mllogs'.
+        savedir (Union[Path, str], optional): path on local filesystem where
+            logs are stored. Defaults to 'mllogs'.
         experiment_name (str, optional): experiment name. Defaults to
             ``itwinai.loggers.BASE_EXP_NAME``.
         tracking_uri (Optional[str], optional): MLFLow tracking URI.
@@ -518,7 +536,11 @@ class MLFlowLogger(Logger):
         log_on_workers: int | List[int] = 0,
     ):
         mfl_savedir = Path(savedir) / "mlflow"
-        super().__init__(savedir=mfl_savedir, log_freq=log_freq, log_on_workers=log_on_workers)
+        super().__init__(
+            savedir=mfl_savedir,
+            log_freq=log_freq,
+            log_on_workers=log_on_workers
+        )
         self.run_description = run_description
         self.run_name = run_name
         self.experiment_name = experiment_name
@@ -554,12 +576,14 @@ class MLFlowLogger(Logger):
                   Defaults to None.
                 - ``run_name`` (Optional[str]): name of the MLFlow run.
                   Defaults to None.
-                - ``parent_run_id`` (Optional[str]): parent run ID to attach to.
+                - ``parent_run_id`` (Optional[str]): parent run ID to
+                attach to.
 
         Returns:
             mlflow.ActiveRun: active MLFlow run.
         """
-        # set tracking uri here again, as in multi-worker settings self.mlflow may reset
+        # set tracking uri here again, as in multi-worker settings
+        # self.mlflow may reset
         self.mlflow.set_tracking_uri(self.tracking_uri)
         self.resolve_experiment_id()
 
@@ -653,7 +677,9 @@ class MLFlowLogger(Logger):
             self.mlflow.log_metric(key=identifier, value=item, step=step)
         elif kind == "artifact":
             if not isinstance(identifier, str):
-                raise ValueError("Expected identifier to be a string for kind='artifact'.")
+                raise ValueError(
+                    "Expected identifier to be a string for kind='artifact'."
+                )
             if not isinstance(item, str):
                 # Save the object locally and then log it
                 name = Path(identifier).name
@@ -677,11 +703,15 @@ class MLFlowLogger(Logger):
             if isinstance(item, self.mlflow.data.Dataset):
                 self.mlflow.log_input(item)
             else:
-                py_logger.warning("Unrecognized dataset type. Must be an MLFlow dataset")
+                py_logger.warning(
+                    "Unrecognized dataset type. Must be an MLFlow dataset"
+                )
 
         elif kind == "torch":
             if not isinstance(identifier, str):
-                raise ValueError("Expected identifier to be a string for kind='torch'")
+                raise ValueError(
+                    "Expected identifier to be a string for kind='torch'"
+                )
 
             import torch
 
@@ -689,12 +719,16 @@ class MLFlowLogger(Logger):
             save_path = self.savedir / ".trash" / str(name)
             save_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(item, save_path)
-            self.mlflow.log_artifact(local_path=save_path, artifact_path=identifier)
+            self.mlflow.log_artifact(
+                local_path=save_path,
+                artifact_path=identifier
+            )
 
         elif kind == "dict":
             self.mlflow.log_dict(dictionary=item, artifact_file=identifier)
         elif kind == "figure":
-            identifier = identifier if identifier.endswith(".png") else identifier + ".png"
+            if not identifier.endswith(".png"):
+                identifier = f"{identifier}.png"
             self.mlflow.log_figure(
                 artifact_file=identifier,
                 figure=item,
@@ -727,8 +761,8 @@ class WandBLogger(Logger):
     """Abstraction around WandB logger.
 
     Args:
-        savedir (Union[Path, str], optional): location on local filesystem where logs
-            are stored. Defaults to 'mllogs'.
+        savedir (Union[Path, str], optional): location on local filesystem
+            where logs are stored. Defaults to 'mllogs'.
         project_name (str, optional): experiment name. Defaults to
             ``itwinai.loggers.BASE_EXP_NAME``.
         log_freq (Union[int, Literal['epoch', 'batch']], optional):
@@ -767,7 +801,11 @@ class WandBLogger(Logger):
         offline_mode: bool = False,
     ) -> None:
         wbl_savedir = Path(savedir) / "wandb"
-        super().__init__(savedir=wbl_savedir, log_freq=log_freq, log_on_workers=log_on_workers)
+        super().__init__(
+            savedir=wbl_savedir,
+            log_freq=log_freq,
+            log_on_workers=log_on_workers
+        )
         self.project_name = project_name
         self.offline_mode = offline_mode
 
@@ -780,8 +818,8 @@ class WandBLogger(Logger):
         """Initializes the logger context. Init WandB run.
 
         Args:
-            rank (int): global rank of current process, used in distributed environments.
-                Defaults to 0.
+            rank (int): global rank of current process, used in
+                distributed environments. Defaults to 0.
         """
         self.worker_rank = rank
 
@@ -789,7 +827,9 @@ class WandBLogger(Logger):
             self.is_initialized = True
             return
 
-        py_logger.info(f"Initializing {self.__class__.__name__} on rank {rank}")
+        py_logger.info(
+            f"Initializing {self.__class__.__name__} on rank {rank}"
+        )
 
         (self.savedir / "wandb").mkdir(exist_ok=True, parents=True)
         self.active_run = self.wandb.init(
@@ -859,8 +899,8 @@ class TensorBoardLogger(Logger):
     TensorFlow.
 
     Args:
-        savedir (Union[Path, str], optional): location on local filesystem where logs
-            are stored. Defaults to 'mllogs'.
+        savedir (Union[Path, str], optional): location on local filesystem
+            where logs are stored. Defaults to 'mllogs'.
         log_freq (Union[int, Literal['epoch', 'batch']], optional):
             determines whether the logger should fulfill or ignore
             calls to the `log()` method. See ``Logger.should_log`` method for
@@ -881,7 +921,13 @@ class TensorBoardLogger(Logger):
     # and add the missing logging types supported by each.
 
     #: Supported kinds in the ``log`` method
-    supported_kinds: Tuple[str] = ("metric", "image", "text", "figure", "torch")
+    supported_kinds: Tuple[str] = (
+        "metric",
+        "image",
+        "text",
+        "figure",
+        "torch"
+    )
 
     def __init__(
         self,
@@ -891,11 +937,15 @@ class TensorBoardLogger(Logger):
         log_on_workers: int | List[int] = 0,
     ) -> None:
         tbl_savedir = Path(savedir) / "tensorboard"
-        super().__init__(savedir=tbl_savedir, log_freq=log_freq, log_on_workers=log_on_workers)
+        super().__init__(
+            savedir=tbl_savedir,
+            log_freq=log_freq,
+            log_on_workers=log_on_workers
+        )
         if framework.lower() not in ["tensorflow", "pytorch"]:
             raise ValueError(
-                "Accepted values for TensorBoardLogger framework are 'tensorflow' and "
-                f"'pytorch'. Received {framework}"
+                "Accepted values for TensorBoardLogger framework are "
+                f"'tensorflow' and 'pytorch'. Received {framework}"
             )
         self.framework = framework.lower()
 
@@ -903,13 +953,17 @@ class TensorBoardLogger(Logger):
         #     import tensorflow as tf
 
         #     self.tf = tf
-        #     self.writer = tf.summary.create_file_writer(tbl_savedir.resolve().as_posix())
+        #     self.writer = tf.summary.create_file_writer(
+        #        tbl_savedir.resolve().as_posix()
+        #     )
         # elif framework.lower() == "pytorch":
         #     from torch.utils.tensorboard import SummaryWriter
 
         #     self.writer = SummaryWriter(tbl_savedir.resolve().as_posix())
         # else:
-        #     raise ValueError("Framework must be either 'tensorflow' or 'pytorch'")
+        #     raise ValueError(
+        #       "Framework must be either 'tensorflow' or 'pytorch'"
+        #     )
 
     @check_not_initialized
     def create_logger_context(self, rank: int = 0, **kwargs) -> None:
@@ -925,20 +979,26 @@ class TensorBoardLogger(Logger):
             self.is_initialized = True
             return
 
-        py_logger.info(f"Initializing {self.__class__.__name__} on rank {rank}")
+        py_logger.info(
+            f"Initializing {self.__class__.__name__} on rank {rank}"
+        )
 
         # Create the writer
         if self.framework == "tensorflow":
             import tensorflow as tf
 
             self.tf = tf
-            self.writer = tf.summary.create_file_writer(self.savedir.resolve().as_posix())
+            self.writer = tf.summary.create_file_writer(
+                self.savedir.resolve().as_posix()
+            )
         elif self.framework == "pytorch":
             from torch.utils.tensorboard import SummaryWriter
 
             self.writer = SummaryWriter(self.savedir.resolve().as_posix())
         else:
-            raise ValueError("Framework must be either 'tensorflow' or 'pytorch'")
+            raise ValueError(
+                "Framework must be either 'tensorflow' or 'pytorch'"
+            )
 
         if self.framework == "tensorflow":
             self.writer.set_as_default()
@@ -981,7 +1041,8 @@ class TensorBoardLogger(Logger):
                     py_logger.debug(
                         "itwinai TensorboardLogger is converting parameter "
                         f"'{name}' to string as it is of type {type(val)}. "
-                        "Supported types for params are int, float, str, bool, or None."
+                        "Supported types for params are int, float, str, "
+                        "bool, or None."
                     )
 
             self.writer.add_hparams(supported_params, {})
@@ -1040,8 +1101,8 @@ class LoggersCollection(Logger):
     """Wrapper of a set of loggers, allowing to use them simultaneously.
 
     Args:
-        loggers (List[Logger]): List of itwinai loggers. Only one logger of each type is
-        allowed in the collection.
+        loggers (List[Logger]): List of itwinai loggers. Only one logger
+        of each type is allowed in the collection.
 
     Raises:
         ValueError: when multiple loggers of the same type are passed.
@@ -1051,12 +1112,15 @@ class LoggersCollection(Logger):
     supported_kinds: Tuple[str]
 
     def __init__(self, loggers: List[Logger]) -> None:
-        super().__init__(savedir=Path("/tmp/mllogs_LoggersCollection"), log_freq=1)
+        super().__init__(
+            savedir=Path("/tmp/mllogs_LoggersCollection"),
+            log_freq=1
+        )
         logger_types = [type(logger) for logger in loggers]
         if len(set(logger_types)) != len(logger_types):
             raise ValueError(
-                f"{self.__class__.__name__} does not allow for multiple loggers of the same"
-                f" type. Received: {logger_types}"
+                f"{self.__class__.__name__} does not allow for multiple "
+                f" loggers of the same type. Received: {logger_types}"
             )
         self.loggers = loggers
 
@@ -1148,8 +1212,8 @@ class Prov4MLLogger(Logger):
             files will be uploaded. Defaults to "www.example.org".
         experiment_name (str, optional): experiment name.
             Defaults to "experiment_name".
-        provenance_save_dir (Union[Path, str], optional): path where to store provenance
-            files and logs. Defaults to "prov".
+        provenance_save_dir (Union[Path, str], optional): path where to
+            store provenance files and logs. Defaults to "prov".
         save_after_n_logs (Optional[int], optional): how often to save
             logs to disk from main memory. Defaults to 100.
         create_graph (Optional[bool], optional): whether to create a
@@ -1197,16 +1261,18 @@ class Prov4MLLogger(Logger):
         )
         self.prov_user_namespace = prov_user_namespace
         self.experiment_name = experiment_name
-        self.provenance_save_dir = provenance_save_dir
+        self.provenance_save_dir = str(provenance_save_dir)
         self.save_after_n_logs = save_after_n_logs
         self.create_graph = create_graph
         self.create_svg = create_svg
 
         import mlflow
-        import prov4ml
+        import yprov4ml
 
-        self.prov4ml = prov4ml
+        self.yprov4ml = yprov4ml
         self.mlflow = mlflow
+        self.context = getattr(self.yprov4ml, "Context", None)
+        self.param_context = "training"
 
     @check_not_initialized
     def create_logger_context(self, rank: int = 0, **kwargs) -> None:
@@ -1222,11 +1288,13 @@ class Prov4MLLogger(Logger):
             self.is_initialized = True
             return
 
-        py_logger.info(f"Initializing {self.__class__.__name__} on rank {rank}")
+        py_logger.info(
+            f"Initializing {self.__class__.__name__} on rank {rank}"
+        )
 
-        self.prov4ml.start_run(
-            prov_user_namespace=self.prov_user_namespace,
+        self.yprov4ml.start_run(
             experiment_name=self.experiment_name,
+            prov_user_namespace=self.prov_user_namespace,
             provenance_save_dir=self.provenance_save_dir,
             save_after_n_logs=self.save_after_n_logs,
             # This class will control which workers can log
@@ -1241,7 +1309,10 @@ class Prov4MLLogger(Logger):
         if not self.should_log():
             return
 
-        self.prov4ml.end_run(create_graph=self.create_graph, create_svg=self.create_svg)
+        self.yprov4ml.end_run(
+            create_graph=self.create_graph,
+            create_svg=self.create_svg
+        )
         self.is_initialized = False
 
     @check_initialized
@@ -1249,9 +1320,30 @@ class Prov4MLLogger(Logger):
         if not self.should_log():
             return
 
-        # Save hyperparams
+        ctx = self._normalize_context(self.param_context)
+
+        # Save hyperparameters
         for param_name, val in params.items():
-            self.prov4ml.log_param(key=param_name, value=val)
+            self.yprov4ml.log_param(
+                key=param_name,
+                value=val,
+                context=ctx
+            )
+
+    def _normalize_context(self, context):
+        """
+        normalize itwinai string contexts to yProv4ML Context.
+        """
+        if self.context is None or context is None:
+            return context
+
+        if isinstance(context, str):
+            try:
+                return self.context[context.upper()]
+            except KeyError:
+                return None
+
+        return context
 
     @check_initialized
     def log(
@@ -1282,58 +1374,75 @@ class Prov4MLLogger(Logger):
         if not self.should_log(batch_idx=batch_idx):
             return
 
+        ctx = self._normalize_context(context)
+
         if kind == "metric":
-            self.prov4ml.log_metric(key=identifier, value=item, context=context, step=step)
+            self.yprov4ml.log_metric(
+                key=identifier,
+                value=item,
+                context=ctx,
+                step=step
+            )
         elif kind == "flops_pb":
             model, batch = item
-            self.prov4ml.log_flops_per_batch(
-                label=identifier, model=model, batch=batch, context=context, step=step
+            self.yprov4ml.log_flops_per_batch(
+                label=identifier,
+                model=model,
+                batch=batch,
+                context=ctx,
+                step=step
             )
         elif kind == "flops_pe":
             model, dataset = item
-            self.prov4ml.log_flops_per_epoch(
+            self.yprov4ml.log_flops_per_epoch(
                 label=identifier,
                 model=model,
                 dataset=dataset,
-                context=context,
+                context=ctx,
                 step=step,
             )
         elif kind == "system":
-            self.prov4ml.log_system_metrics(context=context, step=step)
+            self.yprov4ml.log_system_metrics(context=ctx, step=step)
         elif kind == "carbon":
-            self.prov4ml.log_carbon_metrics(context=context, step=step)
+            self.yprov4ml.log_carbon_metrics(context=ctx, step=step)
         elif kind == "execution_time":
-            self.prov4ml.log_current_execution_time(
-                label=identifier, context=context, step=step
+            self.yprov4ml.log_current_execution_time(
+                label=identifier, context=ctx, step=step
             )
         elif kind == "model":
-            self.prov4ml.save_model_version(
-                model=item, model_name=identifier, context=context, step=step
+            self.yprov4ml.save_model_version(
+                model_name=identifier, model=item, context=ctx, step=step
             )
         elif kind == "best_model":
-            self.prov4ml.log_model(
-                model=item,
+            self.yprov4ml.log_model(
                 model_name=identifier,
+                model=item,
                 log_model_info=True,
-                log_as_artifact=True,
+                log_model_layers=False
             )
         elif kind == "torch":
             from torch.utils.data import DataLoader
 
             if isinstance(item, DataLoader):
-                self.prov4ml.log_dataset(dataset=item, label=identifier)
+                self.yprov4ml.log_dataset(
+                    dataset_label=identifier, dataset=item
+                )
             else:
-                self.prov4ml.log_param(key=identifier, value=item)
-        elif kind == "prov_documents":
-            prov_docs = self.prov4ml.log_provenance_documents(
-                create_graph=True, create_svg=True
-            )
+                self.yprov4ml.log_param(
+                    key=identifier,
+                    value=item,
+                    context=self._normalize_context(self.param_context)
+                )
+ #       elif kind == "prov_documents":
+ #           prov_docs = self.yprov4ml.log_provenance_documents(
+ #               create_graph=True, create_svg=True
+ #           )
 
             # Upload to MLFlow
-            if self.mlflow.active_run() is not None:
-                for f in prov_docs:
-                    if f:
-                        self.mlflow.log_artifact(f)
+ #           if self.mlflow.active_run() is not None:
+ #               for f in prov_docs:
+ #                   if f:
+ #                       self.mlflow.log_artifact(f)
 
 
 class EmptyLogger(Logger):
@@ -1376,7 +1485,14 @@ def get_mlflow_logger(logger: Logger | None) -> MLFlowLogger | None:
         return None
 
     if isinstance(logger, LoggersCollection):
-        return next((log for log in logger.loggers if isinstance(log, MLFlowLogger)), None)
+        return next(
+            (
+                log
+                for log in logger.loggers
+                if isinstance(log, MLFlowLogger)
+            ),
+            None,
+        )
 
     if isinstance(logger, MLFlowLogger):
         return logger
