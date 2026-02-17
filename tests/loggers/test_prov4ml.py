@@ -185,7 +185,7 @@ def test_log_best_model(logger_instance):
             model_name="best_model_v1",
             model=model_mock,
             log_model_info=True,
-            log_as_artifact=True,
+            log_model_layers=False
         )
 
 
