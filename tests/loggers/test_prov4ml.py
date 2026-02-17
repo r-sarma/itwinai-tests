@@ -75,8 +75,8 @@ def test_save_hyperparameters(logger_instance):
     params = {"learning_rate": 0.01, "batch_size": 32}
     with patch("yprov4ml.log_param") as log_param:
         logger_instance.save_hyperparameters(params)
-        log_param.assert_any_call(key="learning_rate", value=0.01)
-        log_param.assert_any_call(key="batch_size", value=32)
+        log_param.assert_any_call(key="learning_rate", value=0.01, context=Context.TRAINING)
+        log_param.assert_any_call(key="batch_size", value=32, context=Context.TRAINING)
 
 
 def test_log_metric(logger_instance):
