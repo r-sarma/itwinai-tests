@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import mlflow
 import pytest
+from yprov4ml import Context
 
 from itwinai.loggers import Prov4MLLogger
-from yprov4ml import Context
 
 
 @pytest.fixture
