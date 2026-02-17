@@ -6,6 +6,7 @@ import mlflow
 import pytest
 
 from itwinai.loggers import Prov4MLLogger
+from yprov4ml import Context
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ def test_log_metric(logger_instance):
         logger_instance.log(item=0.95, identifier="accuracy", kind="metric", step=1)
 
         log_metric.assert_called_once_with(
-            key="accuracy", value=0.95, step=1, context="training"
+            key="accuracy", value=0.95, step=1, context=Context.TRAINING
         )
 
 
@@ -101,7 +102,11 @@ def test_log_flops_per_batch(logger_instance):
         )
 
         log_flops_pb.assert_called_once_with(
-            model=model_mock, batch=batch_mock, label="my_flops_pb", step=1, context="training"
+            model=model_mock,
+            batch=batch_mock,
+            label="my_flops_pb",
+            step=1,
+            context=Context.TRAINING
         )
 
 
@@ -120,7 +125,7 @@ def test_log_flops_per_epoch(logger_instance):
             dataset=dataset_mock,
             label="my_flops_pe",
             step=1,
-            context="training",
+            context=Context.TRAINING,
         )
 
 
@@ -131,7 +136,7 @@ def test_log_system(logger_instance):
     with patch("yprov4ml.log_system_metrics") as log_system:
         logger_instance.log(item=None, identifier=None, kind="system", step=1)
 
-        log_system.assert_called_once_with(context="training", step=1)
+        log_system.assert_called_once_with(context=Context.TRAINING, step=1)
 
 
 def test_log_carbon(logger_instance):
@@ -141,7 +146,7 @@ def test_log_carbon(logger_instance):
     with patch("yprov4ml.log_carbon_metrics") as log_carbon:
         logger_instance.log(item=None, identifier=None, kind="carbon", step=1)
 
-        log_carbon.assert_called_once_with(context="training", step=1)
+        log_carbon.assert_called_once_with(context=Context.TRAINING, step=1)
 
 
 def test_log_execution_time(logger_instance):
@@ -154,7 +159,7 @@ def test_log_execution_time(logger_instance):
         )
 
         log_exec_time.assert_called_once_with(
-            label="execution_time", context="training", step=1
+            label="execution_time", context=Context.TRAINING, step=1
         )
 
 
@@ -167,7 +172,7 @@ def test_log_model(logger_instance):
         logger_instance.log(item=model_mock, identifier="model_v1", kind="model", step=1)
 
         log_model.assert_called_once_with(
-            model_name="model_v1", model=model_mock, context="training", step=1
+            model_name="model_v1", model=model_mock, context=Context.TRAINING, step=1
         )
 
 
